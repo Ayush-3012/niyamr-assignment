@@ -8,9 +8,9 @@ export const checkRules = async (req, res) => {
   try {
     const rules = JSON.parse(req.body.rules);
     const pdfPath = req.file.path;
-    const data = new Uint8Array(fs.readFileSync(pdfPath));
 
     // Load PDF
+    const data = new Uint8Array(fs.readFileSync(pdfPath));
     const loadingTask = pdfjsLib.getDocument({ data });
     const pdf = await loadingTask.promise;
 
@@ -24,17 +24,6 @@ export const checkRules = async (req, res) => {
     }
 
     const textLower = fullText.toLowerCase();
-
-    // SMART DETECTORS
-    const detectors = {
-      email: /[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g,
-      phone: /(\+?\d{1,3}[-\s]?)?\d{10}/g,
-      date: /\b(20\d{2}|19\d{2})\b|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/g,
-      skills: /(javascript|react|node|python|java|sql|mongodb|aws)/gi,
-      education:
-        /(b\.tech|btech|bachelor|master|graduation|university|college|12th|10th)/gi,
-      experience: /(experience|worked|intern|role|position|company)/gi,
-    };
 
     function smartCheck(rule, text) {
       const ruleLower = rule.toLowerCase();
@@ -77,12 +66,12 @@ export const checkRules = async (req, res) => {
       };
     }
 
-    const llmResponse = await checkWithLLM(fullText, rules);
+    const safeText = fullText.slice(0, 10000);
+    const llmResponse = await checkWithLLM(safeText, rules);
     const results = JSON.parse(llmResponse);
 
-    // if (!llmResponse) {
-    //   results = rules.map((rule) => smartCheck(rule, textLower));
-    // }
+    if (!llmResponse)
+      results = rules.map((rule) => smartCheck(rule, textLower));
 
     // Delete temporary PDF
     fs.unlink(pdfPath, () => {});
